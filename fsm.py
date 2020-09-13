@@ -2,6 +2,7 @@ import joblib
 import time
 import sklearn
 import cozmo
+import random
 from cozmo.util import degrees, distance_mm, speed_mmps
 import numpy as np
 from imgclassification_sol import ImageClassifier
@@ -65,12 +66,35 @@ def wait_for_state(robot: cozmo.robot.Robot):
         # Mission 3
 
         if state == 'drone':
+            # Drive in S formation
+
+            # Get and play animation
+            all_animation_triggers = robot.anim_triggers
+            random.shuffle(all_animation_triggers)
+            triggers = 1
+            chosen_trigger = all_animation_triggers[:triggers][0]
+            robot.play_anim_trigger(chosen_trigger).wait_for_completed()
+
             continue
 
         # Mission 4
 
         if state == 'inspection':
-            continue
+            robot.say_text(
+                "Inspection state detected. Starting Mission 4").wait_for_completed()
+
+            for i in range(4):
+                robot.say_text("I am not a spy!", in_parallel=True)
+                drive_action = robot.drive_straight(distance_mm(
+                    180), speed_mmps(50), in_parallel=True)
+                robot.set_lift_height(
+                    1.0, duration=2.0, in_parallel=True).wait_for_completed()
+                robot.set_lift_height(
+                    0.0, duration=2.0, in_parallel=True).wait_for_completed()
+                drive_action.wait_for_completed()
+                robot.turn_in_place(degrees(90)).wait_for_completed()
+
+        continue
 
 
 def find_majority(k):
