@@ -14,6 +14,7 @@ def wait_for_state(robot: cozmo.robot.Robot):
     robot.camera.color_image_enabled = False
     robot.camera.enable_auto_exposure()
     robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
+    robot.set_lift_height(0).wait_for_completed()
 
     # Step 2: Process images and extract the state from the image using our image classification model
     image_classifier = joblib.load('trained_model_1.pkl')
@@ -30,7 +31,9 @@ def wait_for_state(robot: cozmo.robot.Robot):
             predictions.append(pred[0])
 
         state, freq = find_majority(predictions)
-        print(state)
+        if state == 'plane' or state == 'hands' or state == 'truck' or state == 'place':
+            state = 'none'
+        print("Current state: ", state)
 
         # Step 3: Encode the proper behavior for every state
 
@@ -66,7 +69,19 @@ def wait_for_state(robot: cozmo.robot.Robot):
         # Mission 3
 
         if state == 'drone':
+
+            robot.say_text(
+                "Drone state detected. Starting Mission 3").wait_for_completed()
+
             # Drive in S formation
+            robot.drive_wheels(l_wheel_speed=70.0,
+                               r_wheel_speed=20.0, duration=2.0)
+            robot.drive_wheels(l_wheel_speed=20.0,
+                               r_wheel_speed=80.0, duration=4.60)
+            robot.drive_wheels(l_wheel_speed=80.0,
+                               r_wheel_speed=20.0, duration=5.2)
+            robot.drive_wheels(l_wheel_speed=80.0,
+                               r_wheel_speed=80.0, duration=1.5)
 
             # Get and play animation
             all_animation_triggers = robot.anim_triggers
@@ -95,6 +110,9 @@ def wait_for_state(robot: cozmo.robot.Robot):
                 robot.turn_in_place(degrees(90)).wait_for_completed()
 
         continue
+
+        if state == 'none':
+            continue
 
 
 def find_majority(k):
