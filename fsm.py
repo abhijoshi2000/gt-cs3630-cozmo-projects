@@ -1,3 +1,5 @@
+# CS 3630 Lab 2 - Vaud Burton and Abhinav Joshi
+
 import joblib
 import time
 import sklearn
@@ -20,8 +22,8 @@ def wait_for_state(robot: cozmo.robot.Robot):
     image_classifier = joblib.load('trained_model_1.pkl')
     while True:
         predictions = []
-        for i in range(10):
-            time.sleep(0.1)
+        for i in range(30):
+            time.sleep(0.2)
             latest_image = robot.world.latest_image
             new_image = latest_image.raw_image
             img = np.array(new_image)
