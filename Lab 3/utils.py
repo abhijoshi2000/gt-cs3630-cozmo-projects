@@ -56,7 +56,7 @@ def compute_mean_pose(particles, confident_dist=1):
     # average rotation
     m_hx /= m_count
     m_hy /= m_count
-    m_h = math.degrees(math.atan2(m_hx, m_hy));
+    m_h = math.degrees(math.atan2(m_hx, m_hy))
 
     # Now compute how good that mean is -- check how many particles
     # actually are in the immediate vicinity

@@ -90,7 +90,7 @@ def compute_odometry(curr_pose, cvt_inch=True):
 
 async def marker_processing(robot, camera_settings, show_diagnostic_image=False):
     '''
-    Obtain the visible markers from the current frame from Cozmo's camera. 
+    Obtain the visible markers from the current frame from Cozmo's camera.
     Since this is an async function, it must be called using await, for example:
 
         markers, camera_image = await marker_processing(robot, camera_settings, show_diagnostic_image=False)
@@ -100,7 +100,7 @@ async def marker_processing(robot, camera_settings, show_diagnostic_image=False)
         - camera_settings: 3x3 matrix representing the camera calibration settings
         - show_diagnostic_image: if True, shows what the marker detector sees after processing
     Returns:
-        - a list of detected markers, each being a 3-tuple (rx, ry, rh) 
+        - a list of detected markers, each being a 3-tuple (rx, ry, rh)
           (as expected by the particle filter's measurement update)
         - a PIL Image of what Cozmo's camera sees with marker annotations
     '''
@@ -183,12 +183,44 @@ async def run(robot: cozmo.robot.Robot):
             update_gui(x, y, z, has_converged, annotated_image)
             # If the robot is at the goal state and then is picked up
             if reached_goal:
-                # FILL IN YOUR CODE HERE
-                continue
+                if robot.is_picked_up: # Robot picked up, relocalize
+                    await robot.play_anim_trigger(cozmo.anim.Triggers.CodeLabUnhappy).wait_for_completed() # Unhappy animation if the robot is picked up
+                    pf = ParticleFilter(grid)
+                    hasConverged = False
+                    reachedGoalState = False
+                    playedHappy = False
+                    continue
+
+                if playedHappy == False:
+                    await robot.play_anim_trigger(cozmo.anim.Triggers.CodeLabHappy).wait_for_completed()
+                    playedHappy = True
             # If the robot is not at the goal state and then is picked up
-            else:
-                # FILL IN YOUR CODE HERE
-                continue
+            else: 
+                if robot.is_picked_up:
+                    await robot.play_anim_trigger(cozmo.anim.Triggers.CodeLabUnhappy).wait_for_completed() # Happy animation if the robot is picked up
+                    pf = ParticleFilter(grid)
+                    continue
+                x, y, z, _ = compute_mean_pose(pf.particles)
+
+                robot.stop_all_motors()
+                time.sleep(1)
+
+                print("FIRST")
+                diffAngle = diff_heading_deg(math.degrees(math.atan2(goal[1] - y, goal[0] - x)), z)
+                print(diffAngle)
+                await robot.turn_in_place(cozmo.util.degrees(diffAngle)).wait_for_completed()
+
+                print("SECOND")
+                drive_distance = (math.sqrt((goal[0] - x) ** 2 + (goal[1] - y) ** 2) * grid.scale)
+                print(drive_distance)
+                await robot.drive_straight(cozmo.util.distance_mm(drive_distance), cozmo.util.speed_mmps(30)).wait_for_completed()
+
+                print("THIRD")
+                diffAngle2 = (diff_heading_deg(goal[2], z + (diff_heading_deg(math.degrees(math.atan2(goal[1] - y, goal[0] - x)), z))))
+                print(diffAngle2)
+                await robot.turn_in_place(cozmo.util.degrees(diffAngle2), speed=cozmo.util.degrees(95)).wait_for_completed()
+
+                reachedGoalState = True
 
     ###################
 
