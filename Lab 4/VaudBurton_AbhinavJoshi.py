@@ -1,9 +1,11 @@
-'''
-Vaud Burton
-Abhinav Joshi
+# If you run into an "[NSApplication _setup] unrecognized selector" problem on macOS,
+# try uncommenting the following snippet
 
-LAB 4
-'''
+# try:
+#     import matplotlib
+#     matplotlib.use('TkAgg')
+# except ImportError:
+#     pass
 
 from skimage import color
 import cozmo

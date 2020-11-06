@@ -3,6 +3,7 @@ from grid import *
 from particle import Particle
 from utils import *
 from setting import *
+import setting
 import numpy as np
 np.random.seed(RANDOM_SEED)
 
