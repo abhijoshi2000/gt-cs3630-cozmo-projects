@@ -3,6 +3,8 @@ import threading
 
 from utils import *
 import rrt
+import random
+
 
 class CozMap:
     """Class representing a map for search algorithms.
@@ -36,7 +38,8 @@ class CozMap:
 
             # Read in obstacles
             for obstacle in config['obstacles']:
-                self._obstacles.append([Node(tuple(coord)) for coord in obstacle])
+                self._obstacles.append([Node(tuple(coord))
+                                        for coord in obstacle])
 
             # For coordination with visualization
             self.lock = threading.Lock()
@@ -64,7 +67,8 @@ class CozMap:
         for obstacle in self._obstacles:
             num_sides = len(obstacle)
             for idx in range(num_sides):
-                side_start, side_end = obstacle[idx], obstacle[(idx + 1) % num_sides]
+                side_start, side_end = obstacle[idx], obstacle[(
+                    idx + 1) % num_sides]
                 if is_intersect(line_start, line_end, side_start, side_end):
                     return True
         return False
@@ -79,7 +83,8 @@ class CozMap:
             num_sides = len(obstacle)
             is_inside = True
             for idx in range(num_sides):
-                side_start, side_end = obstacle[idx], obstacle[(idx + 1) % num_sides]
+                side_start, side_end = obstacle[idx], obstacle[(
+                    idx + 1) % num_sides]
                 if get_orientation(side_start, side_end, node) == 2:
                     is_inside = False
                     break
@@ -114,7 +119,8 @@ class CozMap:
             node -- grid coordinates of start cell
         """
         if self.is_inside_obstacles(node) or (not self.is_inbound(node)):
-            print("start is not updated since your start is not legitimate\nplease try another one\n")
+            print(
+                "start is not updated since your start is not legitimate\nplease try another one\n")
             return
         self.lock.acquire()
         self._start = Node((node.x, node.y))
@@ -134,7 +140,8 @@ class CozMap:
             node -- grid coordinates of goal cell
         """
         if self.is_inside_obstacles(node) or (not self.is_inbound(node)):
-            print("goal is not added since your goal is not legitimate\nplease try another one\n")
+            print(
+                "goal is not added since your goal is not legitimate\nplease try another one\n")
             return
         self.lock.acquire()
         self._goals.append(node)
@@ -192,9 +199,9 @@ class CozMap:
                 break
 
         self.updated.set()
-        self.changes.extend(['node_paths', 'nodes', 'solved' if self._solved else None])
+        self.changes.extend(
+            ['node_paths', 'nodes', 'solved' if self._solved else None])
         self.lock.release()
-    
 
     def is_solved(self):
         """Return whether a solution has been found
@@ -229,21 +236,26 @@ class CozMap:
     def compute_smooth_path(self, limit=75):
         ############################################################################
         # TODO: please enter your code below.
-        
-        
-        
-        
-        #temporary code below to be replaced
+
         path = self.get_path()
+        for i in range(0, limit):
+            point_1 = random.randint(0, len(path) - 1)
+            point_2 = random.randint(0, len(path) - 1)
+            farther_point = path[max((point_1, point_2))]
+            closer_point = path[min((point_1, point_2))]
+            if point_1 != point_2:
+                if not self.is_collision_with_obstacles((farther_point, closer_point)):
+                    farther_point.parent = closer_point
+                    path = path[0: min((point_1, point_2)) + 1] + \
+                        path[max((point_1, point_2)): len(path) + 1]
         return path
 
         ############################################################################
-        
-        
+
     def get_path(self):
-        
+
         final_path = None
-        
+
         while final_path is None:
             path = []
             cur = None
@@ -256,7 +268,7 @@ class CozMap:
                     path.append(cur)
                     break
             final_path = path[::-1]
-        
+
         return final_path
 
     def is_solved(self):

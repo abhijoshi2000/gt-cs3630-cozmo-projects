@@ -157,11 +157,13 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
                 cmap.set_start(cozmo_pos) # Set starting location within the c-space
                 RRT(cmap, cmap.get_start())
 
-            elif center_goal is None and len(cmap.get_goals()) == 0: # If goal is not known, explore
-                #await robot.go_to_pose(cozmo.util.Pose(map_width/2 - x_init , map_height/2 - y_init, 0, angle_z=cozmo.util.degrees(ang_init)), relative_to_robot=False).wait_for_completed()
-                cozmo_pose = cozmo.util.Pose(x_init + robot.pose.position.x, y_init + robot.pose.position.y, robot.pose.rotation)
-                next_pose = cozmo.util.Pose(map_width/2 - x_init , map_height/2 - y_init, 0, angle_z=cozmo.util.degrees(ang_init))
-                turn_and_move(cozmo_pose, next_pose, robot)
+            elif center_goal is None and len(cmap.get_goals()) == 0: # If goal is not known
+                await robot.go_to_pose(cozmo.util.Pose(map_width/2 - x_init , map_height/2 - y_init, 0, angle_z=cozmo.util.degrees(ang_init)), relative_to_robot=False).wait_for_completed()
+                #cozmo_pose = cozmo.util.Pose(x_init + robot.pose.position.x, y_init + robot.pose.position.y, 0, angle_z=robot.pose.rotation.angle_z.degrees)
+                #next_pose = cozmo.util.Pose(map_width/2 - x_init , map_height/2 - y_init, 0, angle_z=cozmo.util.degrees(ang_init))
+
+                #next_pos = Node((map_width/2 - x_init , map_height/2 - y_init))
+                #await turn_and_move(cozmo_pos, robot.pose.rotation.angle_z.degrees, next_pos, robot)
 
                 while not center_goal:
                     await robot.turn_in_place(cozmo.util.degrees(10)).wait_for_completed()
@@ -170,6 +172,7 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
                     do_reset, center_goal, markedCubes = await detect_cube_and_update_cmap(robot, markedCubes, cozmo_pos)
 
         if cmap.is_solved():
+            print('hi')
             # Get the next node from the path
             for node in cmap.get_smooth_path():
                 cozmo_pos = Node((x_init + robot.pose.position.x, y_init + robot.pose.position.y))
@@ -186,10 +189,12 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
                     RRT(cmap, cmap.get_start())
                     break
                 #drive the robot to next node in path.
-                #await robot.go_to_pose(cozmo.util.Pose(node.x - x_init, node.y - y_init, 0, angle_z=cozmo.util.degrees(0)), relative_to_robot=False).wait_for_completed()
-                cozmo_pose = cozmo.util.Pose(x_init + robot.pose.position.x, y_init + robot.pose.position.y, robot.pose.rotation)
-                next_pose = cozmo.util.Pose(node.x - x_init, node.y - y_init, 0, angle_z=cozmo.util.degrees(0))
-                turn_and_move(cozmo_pose, next_pose, robot)
+                await robot.go_to_pose(cozmo.util.Pose(node.x - x_init, node.y - y_init, 0, angle_z=cozmo.util.degrees(0)), relative_to_robot=False).wait_for_completed()
+                #cozmo_pose = cozmo.util.Pose(x_init + robot.pose.position.x, y_init + robot.pose.position.y, robot.pose.rotation)
+                #next_pose = cozmo.util.Pose(node.x - x_init, node.y - y_init, 0, angle_z=cozmo.util.degrees(0))
+
+                #next_pos = Node((node.x - x_init, node.y - y_init))
+                #await turn_and_move(cozmo_pos, robot.pose.rotation.angle_z.degrees, next_pos, robot)
 
             await robot.say_text("I've arrived.").wait_for_completed()
             break
@@ -200,15 +205,17 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
     '''
     ########################################################################
 
-def turn_and_move(cozmo_pose, goal_pose, robot: cozmo.robot.Robot):
-    x_coord = goal_pose.position.x - cozmo_pose.position.x
-    y_coord = goal_pose.position.y - cozmo_pose.position.y
-    ang_head = np.arctan2(y_coord, x_coord) - cozmo_pose.rotation
-    print(cozmo_pose.rotation)
-    robot.turn_in_place(ang_head).wait_for_completed()
+async def turn_and_move(cozmo_pos, ang_head, goal_pos, robot: cozmo.robot.Robot):
+    x_coord = goal_pos.x - cozmo_pos.x
+    y_coord = goal_pos.y - cozmo_pos.y
+    print(ang_head)
+    ang_head = cozmo.util.degrees(np.arctan2(y_coord, x_coord) / math.pi * 180 - ang_head)
+    print(ang_head)
+    await robot.turn_in_place(ang_head).wait_for_completed()
+
     dist = x_coord ** 2 + y_coord ** 2
     dist = dist ** .5
-    robot.drive_straight(cozmo.util.distance_mm(dist)).wait_for_completed()
+    await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.Speed(30)).wait_for_completed()
 
 
 def get_global_node(local_angle, local_origin, node):
