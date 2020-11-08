@@ -238,16 +238,25 @@ class CozMap:
         # TODO: please enter your code below.
 
         path = self.get_path()
-        for i in range(0, limit):
+        for i in range(len(path) * 2):
             point_1 = random.randint(0, len(path) - 1)
             point_2 = random.randint(0, len(path) - 1)
             farther_point = path[max((point_1, point_2))]
             closer_point = path[min((point_1, point_2))]
             if point_1 != point_2:
-                if not self.is_collision_with_obstacles((farther_point, closer_point)):
+                if not self.is_collision_with_obstacles((farther_point, closer_point)) and get_dist(farther_point, closer_point) <= limit:
                     farther_point.parent = closer_point
                     path = path[0: min((point_1, point_2)) + 1] + \
                         path[max((point_1, point_2)): len(path) + 1]
+                elif not self.is_collision_with_obstacles((farther_point, closer_point)):
+                    added_path = [closer_point]
+                    last_point = closer_point
+                    while get_dist(farther_point, last_point) > limit:
+                        last_point = rrt.step_from_to(last_point, farther_point)
+                        added_path.append(last_point)
+                    path = path[0: min((point_1, point_2)) + 1] + added_path + path[max((point_1, point_2)): len(path) + 1]
+
+
         return path
 
         ############################################################################
