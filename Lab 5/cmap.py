@@ -1,3 +1,4 @@
+from asyncio.tasks import current_task
 import json
 import threading
 
@@ -239,23 +240,25 @@ class CozMap:
 
         path = self.get_path()
         for i in range(len(path) * 2):
-            point_1 = random.randint(0, len(path) - 1)
-            point_2 = random.randint(0, len(path) - 1)
-            farther_point = path[max((point_1, point_2))]
-            closer_point = path[min((point_1, point_2))]
-            if point_1 != point_2:
-                if not self.is_collision_with_obstacles((farther_point, closer_point)) and get_dist(farther_point, closer_point) <= limit:
-                    farther_point.parent = closer_point
+            point_1 = i % len(path)
+            point_2 = (i + 2) % len(path)
+            curr_dist = get_dist(path[point_1], path[point_2])
+            if point_1 < point_2:
+                if not self.is_collision_with_obstacles((path[point_1], path[point_2])) and curr_dist <= limit:
                     path = path[0: min((point_1, point_2)) + 1] + \
-                        path[max((point_1, point_2)): len(path) + 1]
-                elif not self.is_collision_with_obstacles((farther_point, closer_point)):
-                    added_path = [closer_point]
-                    last_point = closer_point
-                    while get_dist(farther_point, last_point) > limit:
-                        last_point = rrt.step_from_to(last_point, farther_point)
-                        added_path.append(last_point)
-                    path = path[0: min((point_1, point_2)) + 1] + added_path + path[max((point_1, point_2)): len(path) + 1]
-
+                        path[max((point_1, point_2)):]
+                else:
+                    added_path = []
+                    last_point = path[point_1]
+                    farther_point = path[point_2]
+                    while curr_dist > limit:
+                        last_point = rrt.step_from_to(
+                            last_point, farther_point, limit)
+                        curr_dist = get_dist(last_point, farther_point)
+                        if last_point != farther_point:
+                            added_path.append(last_point)
+                    path = path[0: point_1 + 1] + added_path + \
+                        path[point_2:]
 
         return path
 
