@@ -1,6 +1,7 @@
 from asyncio.tasks import current_task
 import json
 import threading
+import delivery
 
 from utils2 import *
 import random
@@ -56,26 +57,6 @@ class CozMap:
             return True
         else:
             return False
-
-    def step_from_to(node0, node1, limit=75):
-        ########################################################################
-        # TODO: please enter your code below.
-        # 1. If distance between two nodes is less than limit, return node1
-        # 2. Otherwise, return a node in the direction from node0 to node1 whose
-        #    distance to node0 is limit. Recall that each iteration we can move
-        #    limit units at most
-        # 3. Hint: please consider using np.arctan2 function to get vector angle
-        # 4. Note: remember always return a Node object
-
-        if get_dist(node0, node1) < limit:
-            return node1
-        else:
-            x_coord = node1.x - node0.x
-            y_coord = node1.y - node0.y
-            ang_head = np.arctan2(y_coord, x_coord)
-            temp = Node((node0.x + (limit * np.cos(ang_head)),
-                         node0.y + (limit * np.sin(ang_head))))
-            return temp
 
     def is_collision_with_obstacles(self, line_segment):
         """Check if a line segment intersects with any obstacles
@@ -271,7 +252,7 @@ class CozMap:
                     last_point = path[point_1]
                     farther_point = path[point_2]
                     while curr_dist > limit:
-                        last_point = self.step_from_to(
+                        last_point = delivery.step_from_to(
                             last_point, farther_point, limit)
                         curr_dist = get_dist(last_point, farther_point)
                         if last_point != farther_point:

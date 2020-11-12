@@ -118,6 +118,31 @@ async def marker_processing(robot, camera_settings, show_diagnostic_image=False)
 
     return marker_list, annotated_image
 
+MAX_NODES = 20000
+
+
+def step_from_to(node0, node1, limit=75):
+    ########################################################################
+    # TODO: please enter your code below.
+    # 1. If distance between two nodes is less than limit, return node1
+    # 2. Otherwise, return a node in the direction from node0 to node1 whose
+    #    distance to node0 is limit. Recall that each iteration we can move
+    #    limit units at most
+    # 3. Hint: please consider using np.arctan2 function to get vector angle
+    # 4. Note: remember always return a Node object
+
+    if get_dist(node0, node1) < limit:
+        return node1
+    else:
+        x_coord = node1.x - node0.x
+        y_coord = node1.y - node0.y
+        ang_head = np.arctan2(y_coord, x_coord)
+        temp = Node((node0.x + (limit * np.cos(ang_head)),
+                     node0.y + (limit * np.sin(ang_head))))
+        return temp
+
+    ############################################################################
+
 
 def node_generator(cmap):
     rand_node = None
@@ -139,6 +164,150 @@ def node_generator(cmap):
             rand_node = None
     return rand_node
     ############################################################################
+
+
+def RRT(cmap, start):
+    cmap.add_node(start)
+    map_width, map_height = cmap.get_size()
+    while (cmap.get_num_nodes() < MAX_NODES):
+        ########################################################################
+        # TODO: please enter your code below.
+        # 1. Use CozMap.get_random_valid_node() to get a random node. This
+        #    function will internally call the node_generator above
+        # 2. Get the nearest node to the random node from RRT
+        # 3. Limit the distance RRT can move
+        # 4. Add one path from nearest node to random node
+        #
+
+        # print('--------------------')
+        rand_node = cmap.get_random_valid_node()
+
+        nearest_node = None
+        nodes = cmap.get_nodes()
+        min_dist = math.inf
+
+        # print(rand_node)
+        # print(nodes)
+
+        for n in nodes:
+            # print(n)
+            curr_dist = get_dist(rand_node, n)
+            if curr_dist < min_dist:
+                nearest_node = n
+                min_dist = curr_dist
+
+        rand_node = step_from_to(nearest_node, rand_node)
+
+        ########################################################################
+
+        time.sleep(0.01)
+        cmap.add_path(nearest_node, rand_node)
+        if cmap.is_solved():
+            break
+
+    path = cmap.get_path()
+    smoothed_path = cmap.get_smooth_path()
+
+    if cmap.is_solution_valid():
+        print("A valid solution has been found :-) ")
+        print("Nodes created: ", cmap.get_num_nodes())
+        print("Path length: ", len(path))
+        print("Smoothed path length: ", len(smoothed_path))
+    else:
+        print("Please try again :-(")
+
+
+def get_global_node(local_angle, local_origin, node):
+    """Helper function: Transform the node's position (x,y) from local coordinate frame specified by local_origin and local_angle to global coordinate frame.
+                        This function is used in detect_cube_and_update_cmap()
+        Arguments:
+        local_angle, local_origin -- specify local coordinate frame's origin in global coordinate frame
+        local_angle -- a single angle value
+        local_origin -- a Node object
+        Outputs:
+        new_node -- a Node object that decribes the node's position in global coordinate frame
+    """
+    ########################################################################
+    # TODO: please enter your code below.
+
+    new_node = None
+    t_mat = [
+        [np.cos(local_angle), -(np.sin(local_angle)), local_origin.x],
+        [np.sin(local_angle), np.cos(local_angle),    local_origin.y],
+        [0,                   0,                      1]
+    ]
+    node_mat = [
+        [node.x],
+        [node.y],
+        [1]
+    ]
+    new_mat = np.dot(t_mat, node_mat)
+    new_node = Node((new_mat[0, 0], new_mat[1, 0]))
+    return new_node
+
+    ########################################################################
+
+
+async def detect_cube_and_update_cmap(robot, marked, cozmo_pos):
+    """Helper function used to detect obstacle cubes and the goal cube.
+       1. When a valid goal cube is detected, old goals in cmap will be cleared and a new goal corresponding to the approach position of the cube will be added.
+       2. Approach position is used because we don't want the robot to drive to the center position of the goal cube.
+       3. The center position of the goal cube will be returned as goal_center.
+
+        Arguments:
+        robot -- provides the robot's pose in G_Robot
+                 robot.pose is the robot's pose in the global coordinate frame that the robot initialized (G_Robot)
+                 also provides light cubes
+        cozmo_pose -- provides the robot's pose in G_Arena
+                 cozmo_pose is the robot's pose in the global coordinate we created (G_Arena)
+        marked -- a dictionary of detected and tracked cubes (goal cube not valid will not be added to this list)
+
+        Outputs:
+        update_cmap -- when a new obstacle or a new valid goal is detected, update_cmap will set to True
+        goal_center -- when a new valid goal is added, the center of the goal cube will be returned
+    """
+    global cmap
+
+    # Padding of objects and the robot for C-Space
+    cube_padding = 40.
+    cozmo_padding = 100.
+
+    # Flags
+    update_cmap = False
+    goal_center = None
+
+    # Time for the robot to detect visible cubes
+    time.sleep(1)
+
+    for obj in robot.world.visible_objects:
+
+        if obj.object_id in marked:
+            continue
+
+        # Calculate the object pose in G_Arena
+        # obj.pose is the object's pose in G_Robot
+        # We need the object's pose in G_Arena (object_pos, object_angle)
+        dx = obj.pose.position.x - robot.pose.position.x
+        dy = obj.pose.position.y - robot.pose.position.y
+
+        object_pos = Node((cozmo_pos.x+dx, cozmo_pos.y+dy))
+        object_angle = obj.pose.rotation.angle_z.radians
+
+        # Define an obstacle by its four corners in clockwise order
+        obstacle_nodes = []
+        obstacle_nodes.append(get_global_node(
+            object_angle, object_pos, Node((cube_padding, cube_padding))))
+        obstacle_nodes.append(get_global_node(
+            object_angle, object_pos, Node((cube_padding, -cube_padding))))
+        obstacle_nodes.append(get_global_node(
+            object_angle, object_pos, Node((-cube_padding, -cube_padding))))
+        obstacle_nodes.append(get_global_node(
+            object_angle, object_pos, Node((-cube_padding, cube_padding))))
+        cmap.add_obstacle(obstacle_nodes)
+        marked[obj.object_id] = obj
+        update_cmap = True
+
+    return update_cmap, goal_center, marked
 
 
 class CozmoThread(threading.Thread):
