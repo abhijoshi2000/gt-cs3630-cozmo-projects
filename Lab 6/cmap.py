@@ -1,9 +1,8 @@
 import json
 import threading
 
-from utils import *
-#from rrt import step_from_to
-import rrt
+from utils2 import *
+import delivery
 
 
 class CozMap:
@@ -263,7 +262,8 @@ class CozMap:
         for i in range(len(path)-1):
             newPath.append(path[i])
             while (get_dist(newPath[-1], path[i+1])) > limit:
-                newPath.append(rrt.step_from_to(newPath[-1], path[i+1], limit))
+                newPath.append(delivery.step_from_to(
+                    newPath[-1], path[i+1], limit))
         newPath.append(path[-1])
         path = newPath
 
