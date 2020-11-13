@@ -2,13 +2,59 @@
 import threading
 import cozmo
 from cmap import *
+from particle import *
 from gui import *
 from visualizer import *
+from markers import detect, annotator
+from grid import CozGrid
+from gui import GUIWindow
+from particle import Particle, Robot
+from setting import *
+from particle_filter import *
+from utils import *
+from skimage import color
+import cozmo
+import numpy as np
+from numpy.linalg import inv
+import threading
+import time
+import sys
+import asyncio
+from PIL import Image
 
 
-async def delivery(self):
-    # ENTER CODE HERE
-    return -1
+async def delivery(robot: cozmo.robot.Robot):
+
+    global flag_odom_init, last_pose
+    global grid, gui, pf
+
+    # start streaming
+    robot.camera.image_stream_enabled = True
+    robot.camera.color_image_enabled = False
+    robot.camera.enable_auto_exposure()
+    await robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
+
+    # Obtain the camera intrinsics matrix
+    fx, fy = robot.camera.config.focal_length.x_y
+    cx, cy = robot.camera.config.center.x_y
+    camera_settings = np.array([
+        [fx,  0, cx],
+        [0, fy, cy],
+        [0,  0,  1]
+    ], dtype=np.float)
+
+    ###################
+
+    # ENTER OUR CODE HERE
+
+    ###################
+
+
+def update_gui(x, y, z, has_converged, annotated_image):
+    gui.show_particles(pf.particles)
+    gui.show_mean(x, y, z, has_converged)
+    gui.show_camera_image(annotated_image)
+    gui.updated.set()
 
 
 class ParticleFilter:
@@ -130,18 +176,15 @@ def step_from_to(node0, node1, limit=75):
     #    limit units at most
     # 3. Hint: please consider using np.arctan2 function to get vector angle
     # 4. Note: remember always return a Node object
+    ############################################################################
 
+    #############################################################################
+    # Instructors Solution
     if get_dist(node0, node1) < limit:
         return node1
     else:
-        x_coord = node1.x - node0.x
-        y_coord = node1.y - node0.y
-        ang_head = np.arctan2(y_coord, x_coord)
-        temp = Node((node0.x + (limit * np.cos(ang_head)),
-                     node0.y + (limit * np.sin(ang_head))))
-        return temp
-
-    ############################################################################
+        theta = np.arctan2(node1.y - node0.y, node1.x - node0.x)
+        return Node((node0.x + limit * np.cos(theta), node0.y + limit * np.sin(theta)))
 
 
 def node_generator(cmap):
@@ -152,54 +195,71 @@ def node_generator(cmap):
     # 2. Use CozMap.is_inbound and CozMap.is_inside_obstacles to determine the
     #    legitimacy of the random node.
     # 3. Note: remember always return a Node object
-    prob = random.random()
-    if prob < 0.05:
-        goal_coordinates = cmap.get_goals()[0]
-        return Node((goal_coordinates.x, goal_coordinates.y))
+    ############################################################################
 
-    while(rand_node is None):
-        rand_node = Node((random.random() * cmap.width,
-                          random.random() * cmap.height))
-        if (not cmap.is_inbound(rand_node)) or cmap.is_inside_obstacles(rand_node):
-            rand_node = None
-    return rand_node
+    #############################################################################
+    # Instructors Solution
+    if np.random.rand() < 0.05:
+        # if np.random.rand() < 0.00:
+        return Node((cmap.get_goals()[0].x, cmap.get_goals()[0].y))
+
+    else:
+        while True:
+            rand_node = Node((np.random.uniform(cmap.width),
+                              np.random.uniform(cmap.height)))
+            if cmap.is_inbound(rand_node) \
+                    and (not cmap.is_inside_obstacles(rand_node)):
+                break
+        return rand_node
     ############################################################################
 
 
 def RRT(cmap, start):
+    # cmap.add_node(start)
+    # map_width, map_height = cmap.get_size()
+    # while (cmap.get_num_nodes() < MAX_NODES):
+    #     ########################################################################
+    #     # TODO: please enter your code below.
+    #     # 1. Use CozMap.get_random_valid_node() to get a random node. This
+    #     #    function will internally call the node_generator above
+    #     # 2. Get the nearest node to the random node from RRT
+    #     # 3. Limit the distance RRT can move
+    #     # 4. Add one path from nearest node to random node
+    #     #
+    #     rand_node = None
+    #     nearest_node = None
+    #     pass
+    #     ########################################################################
+    #     time.sleep(0.01)
+    #     cmap.add_path(nearest_node, rand_node)
+    #     if cmap.is_solved():
+    #         break
+
+    # path = cmap.get_path()
+    # smoothed_path = cmap.get_smooth_path()
+
+    # if cmap.is_solution_valid():
+    #     print("A valid solution has been found :-) ")
+    #     print("Nodes created: ", cmap.get_num_nodes())
+    #     print("Path length: ", len(path))
+    #     print("Smoothed path length: ", len(smoothed_path))
+    # else:
+    #     print("Please try again :-(")
+
+    ############################################################################
+    # instructors solution
     cmap.add_node(start)
     map_width, map_height = cmap.get_size()
     while (cmap.get_num_nodes() < MAX_NODES):
-        ########################################################################
-        # TODO: please enter your code below.
-        # 1. Use CozMap.get_random_valid_node() to get a random node. This
-        #    function will internally call the node_generator above
-        # 2. Get the nearest node to the random node from RRT
-        # 3. Limit the distance RRT can move
-        # 4. Add one path from nearest node to random node
-        #
-
-        # print('--------------------')
-        rand_node = cmap.get_random_valid_node()
-
+        rand_node = node_generator(cmap)
+        #rand_node = cmap.get_random_valid_node()
+        nearest_node_dist = np.sqrt(map_height ** 2 + map_width ** 2)
         nearest_node = None
-        nodes = cmap.get_nodes()
-        min_dist = math.inf
-
-        # print(rand_node)
-        # print(nodes)
-
-        for n in nodes:
-            # print(n)
-            curr_dist = get_dist(rand_node, n)
-            if curr_dist < min_dist:
-                nearest_node = n
-                min_dist = curr_dist
-
+        for node in cmap.get_nodes():
+            if get_dist(node, rand_node) < nearest_node_dist:
+                nearest_node_dist = get_dist(node, rand_node)
+                nearest_node = node
         rand_node = step_from_to(nearest_node, rand_node)
-
-        ########################################################################
-
         time.sleep(0.01)
         cmap.add_path(nearest_node, rand_node)
         if cmap.is_solved():
@@ -224,28 +284,19 @@ def get_global_node(local_angle, local_origin, node):
         local_angle, local_origin -- specify local coordinate frame's origin in global coordinate frame
         local_angle -- a single angle value
         local_origin -- a Node object
+
         Outputs:
         new_node -- a Node object that decribes the node's position in global coordinate frame
     """
     ########################################################################
     # TODO: please enter your code below.
-
-    new_node = None
-    t_mat = [
-        [np.cos(local_angle), -(np.sin(local_angle)), local_origin.x],
-        [np.sin(local_angle), np.cos(local_angle),    local_origin.y],
-        [0,                   0,                      1]
-    ]
-    node_mat = [
-        [node.x],
-        [node.y],
-        [1]
-    ]
-    new_mat = np.dot(t_mat, node_mat)
-    new_node = Node((new_mat[0, 0], new_mat[1, 0]))
-    return new_node
-
-    ########################################################################
+    local_vec = np.array([[node.x], [node.y], [1]])
+    global_T_local = np.array([[np.cos(local_angle), -np.sin(local_angle), local_origin.x],
+                               [np.sin(local_angle), np.cos(
+                                   local_angle), local_origin.y],
+                               [0, 0, 1]])
+    global_vec = global_T_local.dot(local_vec)
+    return Node((int(global_vec[0]), int(global_vec[1])))
 
 
 async def detect_cube_and_update_cmap(robot, marked, cozmo_pos):
@@ -315,10 +366,38 @@ class CozmoThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self, daemon=False)
 
-    def delivery(self):
+    def run(self):
         # Cozmo can stay on his charger
         cozmo.robot.Robot.drive_off_charger_on_connect = False
         cozmo.run_program(delivery, use_viewer=False)
+
+
+class RobotThread(threading.Thread):
+    """Thread to run cozmo code separate from main thread
+    """
+
+    def __init__(self):
+        threading.Thread.__init__(self, daemon=True)
+
+    def run(self):
+        # Please refrain from enabling use_viewer since it uses tk, which must be in main thread
+        cozmo.run_program(delivery, use_3d_viewer=False, use_viewer=False)
+        stopevent.set()
+
+
+class RRTThread(threading.Thread):
+    """Thread to run RRT separate from main thread
+    """
+
+    def __init__(self):
+        threading.Thread.__init__(self, daemon=True)
+
+    def run(self):
+        while not stopevent.is_set():
+            RRT(cmap, cmap.get_start())
+            time.sleep(100)
+            cmap.reset_paths()
+        stopevent.set()
 
 
 if __name__ == '__main__':\
@@ -327,8 +406,15 @@ if __name__ == '__main__':\
     stopevent = threading.Event()
 
     # init cozmo thread
-    cozmo_thread = CozmoThread()
-    cozmo_thread.start()
+    # cozmo_thread = CozmoThread()
+    # cozmo_thread.start()
+    # gui.show_particles(pf.particles)
+    # gui.show_mean(0, 0, 0)
+    # gui.start()
+
+    # init robot thread
+    robot_thread = RobotThread()
+    robot_thread.start()
 
     # init cmap
     cmap = CozMap("maps/map2.json", node_generator)
@@ -337,7 +423,4 @@ if __name__ == '__main__':\
     print("Rendering GUI and Visualizer")
     visualizer = Visualizer(cmap)
     visualizer.start()
-    gui.show_particles(pf.particles)
-    gui.show_mean(0, 0, 0)
-    gui.start()
     stopevent.set()

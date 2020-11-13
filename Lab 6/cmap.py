@@ -1,10 +1,9 @@
-from asyncio.tasks import current_task
 import json
 import threading
-import delivery
 
-from utils2 import *
-import random
+from utils import *
+#from rrt import step_from_to
+import rrt
 
 
 class CozMap:
@@ -237,32 +236,38 @@ class CozMap:
     def compute_smooth_path(self, limit=75):
         ############################################################################
         # TODO: please enter your code below.
-
         path = self.get_path()
-        for i in range(len(path) * 2):
-            point_1 = i % len(path)
-            point_2 = (i + 2) % len(path)
-            curr_dist = get_dist(path[point_1], path[point_2])
-            if point_1 < point_2:
-                if not self.is_collision_with_obstacles((path[point_1], path[point_2])) and curr_dist <= limit:
-                    path = path[0: min((point_1, point_2)) + 1] + \
-                        path[max((point_1, point_2)):]
-                else:
-                    added_path = []
-                    last_point = path[point_1]
-                    farther_point = path[point_2]
-                    while curr_dist > limit:
-                        last_point = delivery.step_from_to(
-                            last_point, farther_point, limit)
-                        curr_dist = get_dist(last_point, farther_point)
-                        if last_point != farther_point:
-                            added_path.append(last_point)
-                    path = path[0: point_1 + 1] + added_path + \
-                        path[point_2:]
+        plen = len(path)
+
+        if plen != 0:
+            # run 100 trials
+            for _ in range(2):
+                # pick two random indices
+                indices = [np.random.randint(
+                    0, plen), np.random.randint(0, plen)]
+                indices.sort()
+
+                # if they are not the same or consecutive
+                if indices[1]-indices[0] > 1:
+
+                    p1 = path[indices[0]]
+                    p2 = path[indices[1]]
+
+                    # connect the two nodes directly if there is a straight line between them
+                    if not self.is_collision_with_obstacles((p1, p2)):
+                        newPath = path[:indices[0]+1] + path[indices[1]:]
+                        path = newPath
+                        plen = len(path)
+
+        newPath = []
+        for i in range(len(path)-1):
+            newPath.append(path[i])
+            while (get_dist(newPath[-1], path[i+1])) > limit:
+                newPath.append(rrt.step_from_to(newPath[-1], path[i+1], limit))
+        newPath.append(path[-1])
+        path = newPath
 
         return path
-
-        ############################################################################
 
     def get_path(self):
 

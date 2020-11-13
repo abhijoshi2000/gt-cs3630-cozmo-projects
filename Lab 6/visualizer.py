@@ -13,7 +13,8 @@ class Visualizer():
     def draw_cmap(self):
         """Draw cmap lines
         """
-        self.canvas.create_rectangle(0, 0, self.cmap.width, self.cmap.height)
+        self.canvas.create_rectangle(
+            0, 0, self.cmap.width, self.cmap.height)
 
     def draw_color_square(self, coord, color, size=20, bg=False, tags=''):
         """Draw a colored square centered at a given coord
@@ -75,7 +76,8 @@ class Visualizer():
             width -- desired width of edge
             tags -- tags to apply to edge
         """
-        startcoords = ((start[0] + 0.5), (self.cmap.height - (start[1] + 0.5)))
+        startcoords = ((start[0] + 0.5),
+                       (self.cmap.height - (start[1] + 0.5)))
         endcoords = ((end[0] + 0.5), (self.cmap.height - (end[1] + 0.5)))
         self.canvas.create_line(startcoords[0], startcoords[1], endcoords[0], endcoords[1], fill=color, width=width,
                                 arrow=LAST, tags=tags)
@@ -104,7 +106,8 @@ class Visualizer():
         """
         self.canvas.delete('obstacle')
         for obstacle in self.cmap._obstacles:
-            self.draw_color_poly(obstacle, '#222222', bg=True, tags='obstacle')
+            self.draw_color_poly(obstacle, '#222222',
+                                 bg=True, tags='obstacle')
 
     def draw_nodes(self):
         """"Redraw all nodes, these nodes are in RRT
