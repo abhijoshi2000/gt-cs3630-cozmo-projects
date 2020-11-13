@@ -579,10 +579,12 @@ if __name__ == '__main__':\
     robot_thread.start()
 
     # init cmap
-    cmap = CozMap("maps/map2.json", node_generator)
+    cmap = CozMap("maps/deliveryMap.json", node_generator)
 
     # init gui and visualizer
     print("Rendering GUI and Visualizer")
     visualizer = Visualizer(cmap)
     visualizer.start()
     stopevent.set()
+    # GOAL: [[0, 24], [22, 24],[0, 450],[22, 450]], [[670,24],[455,24],[670,450],[455,450]]
+    # OBSTACLE: [[30, 450],[38, 450],[30, 15],[38,15]]
