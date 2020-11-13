@@ -243,11 +243,15 @@ class CozMap:
             point_1 = i % len(path)
             point_2 = (i + 2) % len(path)
             curr_dist = get_dist(path[point_1], path[point_2])
+            if point_1 > point_2:
+                temp = point_1
+                point_1 = point_2
+                point_2 = temp
             if point_1 < point_2:
                 if not self.is_collision_with_obstacles((path[point_1], path[point_2])) and curr_dist <= limit:
                     path = path[0: min((point_1, point_2)) + 1] + \
                         path[max((point_1, point_2)):]
-                else:
+                elif not self.is_collision_with_obstacles((path[point_1], path[point_2])):
                     added_path = []
                     last_point = path[point_1]
                     farther_point = path[point_2]
@@ -257,8 +261,7 @@ class CozMap:
                         curr_dist = get_dist(last_point, farther_point)
                         if last_point != farther_point:
                             added_path.append(last_point)
-                    path = path[0: point_1 + 1] + added_path + \
-                        path[point_2:]
+                    path = path[0: point_1 + 1] + added_path + path[point_2:]
 
         return path
 

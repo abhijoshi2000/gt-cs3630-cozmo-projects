@@ -173,10 +173,12 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
         # Get the next node from the path
         #drive the robot to next node in path. #First turn to the appropriate angle, and then move to it
         #you can calculate the angle to turn through a trigonometric function
-        print(path)
+        #print(path)
         next_node = path[i]
-        print(next_node)
+        #print(next_node)
         i = i+1
+
+        cozmo_pos = Node((x_init + robot.pose.position.x - cozmo_start_x, y_init + robot.pose.position.y - cozmo_start_y))
         ang_head = robot.pose.rotation.angle_z.degrees - cozmo_start_ang
         await turn_and_move(cozmo_pos, ang_head, next_node, robot)
         # Update the current Cozmo position (cozmo_pos and cozmo_angle) to be new node position and angle
@@ -194,7 +196,7 @@ async def CozmoPlanning(robot: cozmo.robot.Robot):
             cmap.clear_smooth_path()
             cmap.clear_nodes()
             cmap.clear_node_paths()
-
+            i = 0
             RRT(cmap, cozmo_pos)
             path = cmap.get_smooth_path()
 
@@ -272,8 +274,8 @@ async def detect_cube_and_update_cmap(robot, marked, cozmo_pos):
     global cmap
 
     # Padding of objects and the robot for C-Space
-    cube_padding = 40.
-    cozmo_padding = 100.
+    cube_padding = 80.
+    cozmo_padding = 200.
 
     # Flags
     update_cmap = False
