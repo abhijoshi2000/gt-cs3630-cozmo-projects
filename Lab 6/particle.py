@@ -40,8 +40,8 @@ class Particle(object):
 
     @classmethod
     # create some random particles
-    def create_random(cls, count, grid):
-        return [cls(*grid.random_free_place()) for _ in range(0, count)]
+    def create_random(cls, count, grid, guess_x=-1, guess_y=-1):
+        return [cls(*grid.random_free_place(guess_x, guess_y)) for _ in range(0, count)]
 
     def read_markers(self, grid):
         """ Helper function to simulate markers measurements by robot's camera

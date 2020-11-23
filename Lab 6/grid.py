@@ -60,22 +60,27 @@ class CozGrid:
         xx = int(x)
         return (xx, yy) not in self.occupied
 
-    def random_place(self):
+    def random_place(self, guess_x=-1, guess_y=-1):
         """ Return a random place in the map
             Argument: None
             Return: x, y - X and Y in the cell map
         """
-        x = random.uniform(0, self.width)
-        y = random.uniform(0, self.height)
+        if(guess_x==-1 or guess_y==-1):
+            x = random.uniform(0, self.width)
+            y = random.uniform(0, self.height)
+        else:
+            x = random.normalvariate(guess_x, self.width/20)
+            y = random.normalvariate(guess_y, self.height/20)
+        #print(self.width, self.height)
         return x, y
 
-    def random_free_place(self):
+    def random_free_place(self, guess_x=-1, guess_y=-1):
         """ Return a random place in the map which is free from obstacles
             Argument: None
             Return: x, y - X and Y in the cell map
         """
         while True:
-            x, y = self.random_place()
+            x, y = self.random_place(guess_x, guess_y)
             if self.is_free(x, y):
                 return x, y
 

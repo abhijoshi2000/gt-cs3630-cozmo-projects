@@ -1,8 +1,8 @@
 # Set randome seed to None for random testing, to 0 for deterministic testing
 RANDOM_SEED = None
-# RANDOM_SEED = 0
+#RANDOM_SEED = 0
 
-PARTICLE_COUNT = 5000       # Total number of particles in your filter
+PARTICLE_COUNT = 7000       # Total number of particles in your filter
 
 # odometry Gaussian noise model
 ODOM_TRANS_SIGMA = 0.01     # translational err in inch (grid unit)
